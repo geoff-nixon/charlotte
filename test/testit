@@ -1,0 +1,5 @@
+#!/bin/sh
+
+here="$(cd "$(dirname "$0")"; pwd -P)"
+
+for each in "$here"/samples/*; do ruby "$here"/../bin/autoencode $each; done
