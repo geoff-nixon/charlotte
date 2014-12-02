@@ -1,7 +1,7 @@
 autoencode
 ==========
 
-Ruby's (1.9.3+) "econv" charset conversion is awesome, but it lacks the ability to automatically detect and properly encode.
+Ruby's (1.9.3+) "econv" charset conversion is awesome, but it lacks the ability to automatically detect encodings.
 
 This is a first go at a utility/library for doing this in pure Ruby. The main thrust is to be lightweight and fast, rather that pendantic and slow, even if it means sacrificing a little of accuracy.
 
