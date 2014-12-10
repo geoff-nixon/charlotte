@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+require 'charlotte'
+
+ARGV.each{|arg|
+  if File.readable?(arg)
+    puts arg
+    puts File.binread(arg).detect_encoding.to_s.gsub("ASCII-8BIT","BINARY")
+    puts ''
+  end
+}
