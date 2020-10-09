@@ -1,7 +1,7 @@
 module Charlotte # (c) Geoff Nixon, 2014. MIT licence.
   #### Charlotte -- Fast and dirty encoding-or-binary detector/auto-converter.
   #### Pronounced "charlet"; rhymes with "chardet". Also, my kid sister's name!
-  
+
   # Adapted from: https://github.com/file/file/blob/master/src/encoding.c:
 
   # T: Character appears in plain ASCII text.
@@ -38,6 +38,14 @@ module Charlotte # (c) Geoff Nixon, 2014. MIT licence.
   NOTIN1BYTE = /[\x00-\x06\x0B\x0E-\x1A\x1C-\x1F\x7F]/n
   NOTISO8859 = /[\x00-\x06\x0B\x0E-\x1A\x1C-\x1F\x7F\x80-\x84\x86-\x9F]/n
 
+  # Information to identify MacRoman
+  # https://stackoverflow.com/questions/4198804/
+  # The bytes 0x81, 0x8D, 0x8F, 0x90, 0x9D are not used in windows-1252.
+  # If they occur, then assume the data is MacRoman.
+  NOTINCP1252 = /[\x81\x8D\x8F\x90\x9D]/n
+  CP1252CHARS = /[\x92\x95\x96\x97\xAE\xB0\xB7\xE8\xE9\xF6]/n
+  MCROMNCHARS = /[\x8E\x8F\x9A\xA1\xA5\xA8\xD0\xD1\xD5\xE1]/n
+
   # It is *much* faster simply to read into the "string" with regex than to
   # convert into a byte array/set: http://stackoverflow.com/a/27283992/2351351.
 
@@ -47,34 +55,45 @@ module Charlotte # (c) Geoff Nixon, 2014. MIT licence.
     # ISO-8859-1, and other extented-ASCII encodings; long-tail, legacy
     # multibyte encodings are returned as ASCII-8BIT along with binary files.
 
-    force_encoding('BINARY') # Needed to prevent non-matching regex charset.
-    sample = self[0..19]     # Keep sample string under 23 bytes.
-    self.sub!(UTF8HASBOM, '') if sample[UTF8HASBOM] # Strip any UTF-8 BOM.
-
-    # See: http://www.daniellesucher.com/2013/07/23/ruby-case-versus-if/
-    if    sample.ascii_only? && force_encoding('UTF-8').valid_encoding?
-
-    elsif sample[UTF32LEBOM] && force_encoding('UTF-32LE').valid_encoding?
-    elsif sample[UTF32BEBOM] && force_encoding('UTF-32BE').valid_encoding?
-    elsif sample[UTF16LEBOM] && force_encoding('UTF-16LE').valid_encoding?
-    elsif sample[UTF16BEBOM] && force_encoding('UTF-16BE').valid_encoding?
-
-    elsif force_encoding('UTF-8').valid_encoding?
-
-    elsif force_encoding('BINARY')[NOTISO8859].nil?
-      force_encoding('ISO-8859-1')
-
-    elsif force_encoding('BINARY')[NOTIN1BYTE].nil?
-      force_encoding('Windows-1252')
-
-    else  force_encoding('BINARY')
-    end
+    # detect and punch encoding
+    detect_encoding(true)
   end
 
-  def detect_encoding
-    # TODO: Fake Charlock's {:encoding, :language, :ruby_language, :confidence}?
-    punch_encoding
-    encoding
+  def detect_encoding(punch=false)
+    # use self or copy while detect
+    detect = punch ? self : self[0..-1]
+
+    detect.force_encoding('BINARY') # Needed to prevent non-matching regex charset.
+    sample = detect[0..19]     # Keep sample string under 23 bytes.
+    detect.sub!(UTF8HASBOM, '') if sample[UTF8HASBOM] # Strip any UTF-8 BOM.
+
+    # See: http://www.daniellesucher.com/2013/07/23/ruby-case-versus-if/
+    if    sample.ascii_only? && detect.force_encoding('UTF-8').valid_encoding?
+
+    elsif sample[UTF32LEBOM] && detect.force_encoding('UTF-32LE').valid_encoding?
+    elsif sample[UTF32BEBOM] && detect.force_encoding('UTF-32BE').valid_encoding?
+    elsif sample[UTF16LEBOM] && detect.force_encoding('UTF-16LE').valid_encoding?
+    elsif sample[UTF16BEBOM] && detect.force_encoding('UTF-16BE').valid_encoding?
+
+    elsif detect.force_encoding('UTF-8').valid_encoding?
+
+    elsif detect.force_encoding('BINARY')[NOTISO8859].nil?
+      detect.force_encoding('ISO-8859-1')
+
+    elsif detect.force_encoding('BINARY')[NOTIN1BYTE].nil?
+
+      if  detect.force_encoding('BINARY')[NOTINCP1252].nil? &&
+            detect.force_encoding('BINARY').scan(MCROMNCHARS).length < detect.force_encoding('BINARY').scan(CP1252CHARS).length
+
+          detect.force_encoding('Windows-1252')
+      else
+          detect.force_encoding('MacRoman')
+      end
+
+    else  detect.force_encoding('BINARY')
+    end
+
+    detect.encoding
   end
 
   alias_method :detected_encoding, :detect_encoding
