@@ -43,6 +43,11 @@ module Charlotte # (c) Geoff Nixon, 2014. MIT licence.
   # The bytes 0x81, 0x8D, 0x8F, 0x90, 0x9D are not used in windows-1252.
   # If they occur, then assume the data is MacRoman.
   NOTINCP1252 = /[\x81\x8D\x8F\x90\x9D]/n
+  # Statiscal approach to identify CP1252 vs MacRoman
+  # As from above stackoverflow question the most common
+  # non-ASCII characters are ·•–é°®’èö—. Based on this fact,
+  # counting CP1252CHARS vs MCROMNCHARS will help to
+  # decide the encoding
   CP1252CHARS = /[\x92\x95\x96\x97\xAE\xB0\xB7\xE8\xE9\xF6]/n
   MCROMNCHARS = /[\x8E\x8F\x9A\xA1\xA5\xA8\xD0\xD1\xD5\xE1]/n
 
